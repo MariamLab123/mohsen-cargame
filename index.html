@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War Game</title>
+    <style>
+        *{
+          font-family:sans-serif;
+          }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #333;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border: 2px solid #fff;
+            background-color: #444;
+        }
+
+        .player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background-color: #0f0;
+            transform: translateX(-50%);
+        }
+
+        .bullet {
+            position: absolute;
+            width: 4px;
+            height: 10px;
+            background-color: #fff;
+        }
+
+        .enemy {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #f00;
+        }
+
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .game-over button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        .h1{
+         color:white;
+         
+        }
+    </style>
+</head>
+<body>
+<center><h1 class="h1">Mohsen Cargame</h1></center>
+    <div class="game-container">
+        <div class="player"></div>
+        <div class="game-over">
+            <h1>Game Over</h1>
+            <button onclick="restartGame()">Retry</button>
+        </div>
+    </div>
+    <script>
+        const gameContainer = document.querySelector('.game-container');
+        const player = document.querySelector('.player');
+        const gameOverScreen = document.querySelector('.game-over');
+        let playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+        let bullets = [];
+        let enemies = [];
+        let enemyInterval;
+        let bulletInterval;
+        let gameRunning = true;
+
+        document.addEventListener('keydown', movePlayer);
+        document.addEventListener('keyup', stopShooting);
+
+        function movePlayer(e) {
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft') {
+                playerX -= 10;
+                if (playerX < 0) playerX = 0;
+            } else if (e.key === 'ArrowRight') {
+                playerX += 10;
+                if (playerX > gameContainer.offsetWidth - player.offsetWidth) playerX = gameContainer.offsetWidth - player.offsetWidth;
+            }
+            player.style.left = `${playerX}px`;
+            
+            if (e.key === ' ') {
+                startShooting();
+            }
+        }
+
+        function startShooting() {
+            if (!bulletInterval) {
+                bulletInterval = setInterval(shoot, 300);
+            }
+        }
+
+        function stopShooting(e) {
+            if (e.key === ' ') {
+                clearInterval(bulletInterval);
+                bulletInterval = null;
+            }
+        }
+
+        function shoot() {
+            const bullet = document.createElement('div');
+            bullet.classList.add('bullet');
+            bullet.style.left = `${playerX + player.offsetWidth / 2 - 2}px`;
+            bullet.style.bottom = '40px';
+            gameContainer.appendChild(bullet);
+            bullets.push(bullet);
+        }
+
+        function createEnemy() {
+            const enemy = document.createElement('div');
+            enemy.classList.add('enemy');
+            enemy.style.left = `${Math.random() * (gameContainer.offsetWidth - 40)}px`;
+            enemy.style.top = '0px';
+            gameContainer.appendChild(enemy);
+            enemies.push(enemy);
+        }
+
+        function moveBullets() {
+            bullets.forEach((bullet, index) => {
+                let bulletY = bullet.offsetTop - 10;
+                bullet.style.top = `${bulletY}px`;
+
+                if (bulletY < 0) {
+                    bullet.remove();
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+
+        function moveEnemies() {
+            enemies.forEach((enemy, index) => {
+                let enemyY = enemy.offsetTop + 5;
+                enemy.style.top = `${enemyY}px`;
+
+                if (enemyY > gameContainer.offsetHeight) {
+                    enemy.remove();
+                    enemies.splice(index, 1);
+                }
+
+                if (isColliding(player, enemy)) {
+                    endGame();
+                }
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (isColliding(bullet, enemy)) {
+                        bullet.remove();
+                        enemy.remove();
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                    }
+                });
+            });
+        }
+
+        function isColliding(a, b) {
+            const aRect = a.getBoundingClientRect();
+            const bRect = b.getBoundingClientRect();
+
+            return !(
+                aRect.top > bRect.bottom ||
+                aRect.bottom < bRect.top ||
+                aRect.left > bRect.right ||
+                aRect.right < bRect.left
+            );
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(enemyInterval);
+            clearInterval(bulletInterval);
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function restartGame() {
+            gameRunning = true;
+            gameOverScreen.style.display = 'none';
+            bullets.forEach(bullet => bullet.remove());
+            enemies.forEach(enemy => enemy.remove());
+            bullets = [];
+            enemies = [];
+            playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+            player.style.left = `${playerX}px`;
+            enemyInterval = setInterval(createEnemy, 2000);
+        }
+
+        enemyInterval = setInterval(createEnemy, 2000);
+        setInterval(moveBullets, 50);
+        setInterval(moveEnemies, 50);
+        setInterval(checkCollisions, 50);
+    </script>
+</body>
+</html>
